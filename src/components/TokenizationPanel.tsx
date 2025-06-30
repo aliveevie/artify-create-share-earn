@@ -28,6 +28,8 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   // Use the user's selected chain, or default to base
   const publicClient = createPublicClient({
@@ -50,13 +52,27 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setTxHash(null);
+    setPending(false);
     try {
       const res = await createCoin(coinParams, walletClient, publicClient, {
         gasMultiplier: 120,
       });
       setResult(res);
+      setTxHash(res.hash);
     } catch (e: any) {
-      setError(e?.message || "Error creating coin");
+      if (e?.hash) {
+        setTxHash(e.hash);
+      }
+      if (e?.message?.includes('Timed out while waiting for transaction')) {
+        setError(
+          `Transaction is taking longer than expected. You can check the status here: ` +
+          (e.hash ? `<a href="https://basescan.org/tx/${e.hash}" target="_blank" rel="noopener noreferrer" class="underline text-blue-700">${e.hash}</a>` : '')
+        );
+        setPending(true);
+      } else {
+        setError(e?.message || "Error creating coin");
+      }
     } finally {
       setLoading(false);
     }
@@ -150,8 +166,16 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
             <p><strong>Type:</strong> {tokenData.contentType || 'Not selected'}</p>
           </div>
         </div>
-        {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
-        {result && (
+        {txHash && (
+          <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 mt-2 text-yellow-800">
+            <div className="font-bold mb-1">Transaction Submitted</div>
+            <div className="text-xs break-all mb-1">
+              Tx Hash: <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{txHash}</a>
+            </div>
+            {pending && <div className="text-xs">Waiting for confirmation... (You can check the status on BaseScan)</div>}
+          </div>
+        )}
+        {result && result.address && (
           <div className="bg-green-100 border border-green-300 rounded-lg p-4 mt-2 text-green-800">
             <div className="font-bold mb-1">Coin Created Successfully!</div>
             <div className="text-xs break-all mb-1">
@@ -164,6 +188,9 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
               Deployment details: <pre>{JSON.stringify(result.deployment, null, 2)}</pre>
             </div>
           </div>
+        )}
+        {error && (
+          <div className="text-red-500 text-sm mb-2" dangerouslySetInnerHTML={{ __html: error }} />
         )}
         <Button
           onClick={handleCreateCoin}
