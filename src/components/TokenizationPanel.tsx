@@ -25,7 +25,7 @@ const TokenizationPanel = () => {
   };
 
   return (
-    <Card className="gradient-card border-0 shadow-lg hover-glow">
+    <Card className="gradient-card shadow-lg hover-glow">
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
           🎁 Tokenization Panel
@@ -75,6 +75,7 @@ const TokenizationPanel = () => {
                 <SelectItem value="image">🖼️ Image/Art</SelectItem>
                 <SelectItem value="music">🎵 Music</SelectItem>
                 <SelectItem value="code">💻 Code</SelectItem>
+                <SelectItem value="ai">🤖 AI Generated</SelectItem>
               </SelectContent>
             </Select>
           </div>

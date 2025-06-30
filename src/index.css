@@ -98,7 +98,7 @@ All colors MUST be HSL.
   .gradient-card {
     background: var(--gradient-card);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
   }
   
   .animate-fade-in {

@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const CreatorDashboard = () => {
   const [selectedContentType, setSelectedContentType] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const contentTypes = [
     { value: 'blog', label: '📝 Blog Post', description: 'Articles, tutorials, written content' },
@@ -16,6 +18,7 @@ const CreatorDashboard = () => {
     { value: 'image', label: '🖼️ Image/Art', description: 'JPG, PNG, digital artwork' },
     { value: 'music', label: '🎵 Music/Audio', description: 'MP3, WAV, audio content' },
     { value: 'code', label: '💻 GitHub Repo', description: 'Code repositories, documentation' },
+    { value: 'ai', label: '🤖 AI Generated', description: 'Generate content with AI assistance' },
   ];
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,8 +28,19 @@ const CreatorDashboard = () => {
     }
   };
 
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    setIsGenerating(true);
+    // Simulate AI generation
+    setTimeout(() => {
+      setIsGenerating(false);
+      console.log('AI content generated with prompt:', aiPrompt);
+    }, 2000);
+  };
+
   return (
-    <Card className="gradient-card border-0 shadow-lg hover-glow">
+    <Card className="gradient-card shadow-lg hover-glow">
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
           🧑‍🎨 Creator Dashboard
@@ -51,6 +65,42 @@ const CreatorDashboard = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {selectedContentType === 'ai' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">AI Content Prompt</label>
+              <Textarea 
+                placeholder="Describe what you want to create (e.g., 'Write a blog post about blockchain technology' or 'Generate a creative story about space exploration')..." 
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Select defaultValue="blog">
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="blog">📝 Blog Post</SelectItem>
+                  <SelectItem value="story">📚 Story</SelectItem>
+                  <SelectItem value="article">📰 Article</SelectItem>
+                  <SelectItem value="script">🎬 Script</SelectItem>
+                  <SelectItem value="code">💻 Code</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={handleAiGenerate}
+                disabled={!aiPrompt.trim() || isGenerating}
+                className="gradient-primary text-white"
+              >
+                {isGenerating ? '🤖 Generating...' : '✨ Generate with AI'}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {selectedContentType === 'blog' && (
           <div className="space-y-4">
