@@ -1,15 +1,12 @@
-
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 interface HeaderProps {
-  isWalletConnected: boolean;
-  onWalletConnect: () => void;
   activeSection: string;
   setActiveSection: (section: string) => void;
 }
 
-const Header = ({ isWalletConnected, onWalletConnect, activeSection, setActiveSection }: HeaderProps) => {
+const Header = ({ activeSection, setActiveSection }: HeaderProps) => {
   const navigationItems = [
     { id: 'home', label: 'Home' },
     { id: 'marketplace', label: 'Marketplace' },
@@ -43,17 +40,13 @@ const Header = ({ isWalletConnected, onWalletConnect, activeSection, setActiveSe
               ))}
             </nav>
           </div>
-          
-          <Button 
-            onClick={onWalletConnect}
-            className={`${
-              isWalletConnected 
-                ? 'bg-green-500 hover:bg-green-600' 
-                : 'gradient-primary'
-            } text-white px-6 hover-glow`}
-          >
-            {isWalletConnected ? 'Wallet Connected' : 'Connect Wallet'}
-          </Button>
+          <div className="flex items-center">
+            <ConnectButton
+              showBalance={false}
+              chainStatus="icon"
+              accountStatus={{ smallScreen: 'avatar', largeScreen: 'full' }}
+            />
+          </div>
         </div>
       </div>
     </header>

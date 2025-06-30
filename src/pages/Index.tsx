@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '../components/Header';
 import HeroSection from '../components/HeroSection';
@@ -9,12 +8,6 @@ import AnalyticsSection from '../components/AnalyticsSection';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('marketplace');
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-
-  const handleWalletConnect = () => {
-    // Mock wallet connection for demo
-    setIsWalletConnected(!isWalletConnected);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-lime-50 via-green-50 to-emerald-100 relative overflow-hidden">
@@ -26,8 +19,6 @@ const Index = () => {
       
       <div className="relative z-10">
         <Header 
-          isWalletConnected={isWalletConnected}
-          onWalletConnect={handleWalletConnect}
           activeSection={activeSection}
           setActiveSection={setActiveSection}
         />
