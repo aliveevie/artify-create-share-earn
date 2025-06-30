@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAccount, useWalletClient } from "wagmi";
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { createCoin, DeployCurrency } from "@zoralabs/coins-sdk";
+import { createPublicClient, http, Address } from "viem";
+import { base } from "viem/chains";
 
 interface TokenizationPanelProps {
   creatorData: any;
@@ -11,6 +16,8 @@ interface TokenizationPanelProps {
 }
 
 const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
+  const { address, chain } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const [tokenData, setTokenData] = useState({
     name: '',
     symbol: '',
@@ -18,24 +25,57 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
     initialSupply: '1000',
     contentType: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Prefill contentType and description from creatorData
-    setTokenData(prev => ({
-      ...prev,
-      contentType: creatorData?.contentType || '',
-      description: creatorData?.blogContent || creatorData?.aiPrompt || creatorData?.codeDescription || '',
-    }));
-  }, [creatorData]);
+  // Use the user's selected chain, or default to base
+  const publicClient = createPublicClient({
+    chain: base,
+    transport: http(), // Use your preferred RPC URL or default
+  });
 
-  const handleInputChange = (field: keyof typeof tokenData, value: string) => {
-    setTokenData(prev => ({ ...prev, [field]: value }));
+  // Build coinParams from user input
+  const coinParams = {
+    name: tokenData.name,
+    symbol: tokenData.symbol,
+    uri: "ipfs://bafybeigoxzqzbnxsn35vq7lls3ljxdcwjafxvbvkivprsodzrptpiguysy", // TODO: use real metadata
+    payoutRecipient: address as Address,
+    // platformReferrer: "0x...", // Optional
+    chainId: base.id,
+    currency: DeployCurrency.ZORA,
   };
 
-  const handleMintCoin = () => {
-    console.log('Minting coin with data:', tokenData, creatorData);
-    // Here you would integrate with Zora Coins SDK
+  const handleCreateCoin = async () => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await createCoin(coinParams, walletClient, publicClient, {
+        gasMultiplier: 120,
+      });
+      setResult(res);
+    } catch (e: any) {
+      setError(e?.message || "Error creating coin");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (!address || !walletClient) {
+    return (
+      <Card className="gradient-card shadow-lg hover-glow">
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center gap-2">🎁 Tokenization Panel</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6 text-center">
+          <p className="mb-4 text-lg font-medium">Please connect your wallet to continue.</p>
+          <ConnectButton showBalance={false} chainStatus="icon" accountStatus={{ smallScreen: 'avatar', largeScreen: 'full' }} />
+          <Button variant="outline" onClick={onBack} className="mt-6">← Back</Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="gradient-card shadow-lg hover-glow">
@@ -52,7 +92,7 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
             <Input 
               placeholder="e.g., My Creative Coin"
               value={tokenData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
+              onChange={(e) => setTokenData(prev => ({ ...prev, name: e.target.value }))}
             />
           </div>
           <div>
@@ -60,26 +100,24 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
             <Input 
               placeholder="e.g., MCC"
               value={tokenData.symbol}
-              onChange={(e) => handleInputChange('symbol', e.target.value.toUpperCase())}
+              onChange={(e) => setTokenData(prev => ({ ...prev, symbol: e.target.value.toUpperCase() }))}
               maxLength={6}
             />
           </div>
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-2">Description</label>
           <Textarea 
             placeholder="Describe your content and what makes it valuable..."
             value={tokenData.description}
-            onChange={(e) => handleInputChange('description', e.target.value)}
+            onChange={(e) => setTokenData(prev => ({ ...prev, description: e.target.value }))}
             rows={3}
           />
         </div>
-
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Content Type</label>
-            <Select value={tokenData.contentType} onValueChange={(value) => handleInputChange('contentType', value)}>
+            <Select value={tokenData.contentType} onValueChange={(value) => setTokenData(prev => ({ ...prev, contentType: value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
@@ -99,11 +137,10 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
               type="number"
               placeholder="1000"
               value={tokenData.initialSupply}
-              onChange={(e) => handleInputChange('initialSupply', e.target.value)}
+              onChange={(e) => setTokenData(prev => ({ ...prev, initialSupply: e.target.value }))}
             />
           </div>
         </div>
-
         <div className="bg-muted/30 rounded-lg p-4">
           <h4 className="font-medium mb-2">Token Preview</h4>
           <div className="space-y-1 text-sm text-muted-foreground">
@@ -113,15 +150,28 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
             <p><strong>Type:</strong> {tokenData.contentType || 'Not selected'}</p>
           </div>
         </div>
-
-        <Button 
-          onClick={handleMintCoin}
-          className="w-full gradient-primary text-white text-lg py-6 hover-glow"
-          disabled={!tokenData.name || !tokenData.symbol}
+        {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
+        {result && (
+          <div className="bg-green-100 border border-green-300 rounded-lg p-4 mt-2 text-green-800">
+            <div className="font-bold mb-1">Coin Created Successfully!</div>
+            <div className="text-xs break-all mb-1">
+              Tx Hash: <a href={`https://basescan.org/tx/${result.hash}`} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{result.hash}</a>
+            </div>
+            <div className="text-xs break-all mt-1">
+              Coin Address: <a href={`https://basescan.org/address/${result.address}`} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{result.address}</a>
+            </div>
+            <div className="text-xs mt-2">
+              Deployment details: <pre>{JSON.stringify(result.deployment, null, 2)}</pre>
+            </div>
+          </div>
+        )}
+        <Button
+          onClick={handleCreateCoin}
+          className="w-full gradient-primary text-white text-lg py-6 hover-glow mt-4"
+          disabled={loading || !tokenData.name || !tokenData.symbol}
         >
-          🚀 Mint Your Coin
+          {loading ? '⏳ Creating...' : '🚀 Create Your Coin'}
         </Button>
-
         <p className="text-xs text-muted-foreground text-center">
           By minting, you agree to our terms and confirm ownership of the content.
         </p>
