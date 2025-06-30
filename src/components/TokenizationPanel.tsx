@@ -1,12 +1,16 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const TokenizationPanel = () => {
+interface TokenizationPanelProps {
+  creatorData: any;
+  onBack: () => void;
+}
+
+const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
   const [tokenData, setTokenData] = useState({
     name: '',
     symbol: '',
@@ -15,12 +19,21 @@ const TokenizationPanel = () => {
     contentType: ''
   });
 
+  useEffect(() => {
+    // Prefill contentType and description from creatorData
+    setTokenData(prev => ({
+      ...prev,
+      contentType: creatorData?.contentType || '',
+      description: creatorData?.blogContent || creatorData?.aiPrompt || creatorData?.codeDescription || '',
+    }));
+  }, [creatorData]);
+
   const handleInputChange = (field: keyof typeof tokenData, value: string) => {
     setTokenData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleMintCoin = () => {
-    console.log('Minting coin with data:', tokenData);
+    console.log('Minting coin with data:', tokenData, creatorData);
     // Here you would integrate with Zora Coins SDK
   };
 
@@ -32,6 +45,7 @@ const TokenizationPanel = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        <Button variant="outline" onClick={onBack} className="mb-2">← Back</Button>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Coin Name *</label>

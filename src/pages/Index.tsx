@@ -8,6 +8,11 @@ import AnalyticsSection from '../components/AnalyticsSection';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('marketplace');
+  const [creatorData, setCreatorData] = useState<any | null>(null);
+
+  const handleContinueToTokenization = (data: any) => {
+    setCreatorData(data);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-lime-50 via-green-50 to-emerald-100 relative overflow-hidden">
@@ -29,8 +34,11 @@ const Index = () => {
           {activeSection === 'create' && (
             <div className="container mx-auto px-4 py-8">
               <div className="grid lg:grid-cols-2 gap-8">
-                <CreatorDashboard />
-                <TokenizationPanel />
+                {!creatorData ? (
+                  <CreatorDashboard onContinue={handleContinueToTokenization} />
+                ) : (
+                  <TokenizationPanel creatorData={creatorData} onBack={() => setCreatorData(null)} />
+                )}
               </div>
             </div>
           )}

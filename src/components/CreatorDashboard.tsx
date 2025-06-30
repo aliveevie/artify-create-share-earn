@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,10 +5,26 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const CreatorDashboard = () => {
-  const [selectedContentType, setSelectedContentType] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [aiPrompt, setAiPrompt] = useState('');
+// Add prop for passing collected data to parent (for tokenization)
+interface CreatorDashboardProps {
+  onContinue: (data: any) => void;
+}
+
+const CreatorDashboard = ({ onContinue }: CreatorDashboardProps) => {
+  // Unified state for all content/metadata
+  const [form, setForm] = useState({
+    contentType: '',
+    uploadedFile: null as File | null,
+    aiPrompt: '',
+    blogTitle: '',
+    blogContent: '',
+    videoUrl: '',
+    imageUrl: '',
+    musicUrl: '',
+    codeRepoUrl: '',
+    codeDescription: '',
+    aiType: 'blog',
+  });
   const [isGenerating, setIsGenerating] = useState(false);
 
   const contentTypes = [
@@ -24,19 +39,29 @@ const CreatorDashboard = () => {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setUploadedFile(file);
+      setForm((prev) => ({ ...prev, uploadedFile: file }));
     }
   };
 
+  const handleChange = (field: string, value: any) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleAiGenerate = async () => {
-    if (!aiPrompt.trim()) return;
-    
+    if (!form.aiPrompt.trim()) return;
     setIsGenerating(true);
     // Simulate AI generation
     setTimeout(() => {
       setIsGenerating(false);
-      console.log('AI content generated with prompt:', aiPrompt);
+      // In real implementation, set generated content in form
+      // handleChange('aiGeneratedContent', ...)
+      console.log('AI content generated with prompt:', form.aiPrompt);
     }, 2000);
+  };
+
+  // Unified continue handler
+  const handleContinue = () => {
+    onContinue(form);
   };
 
   return (
@@ -49,7 +74,7 @@ const CreatorDashboard = () => {
       <CardContent className="space-y-6">
         <div>
           <label className="block text-sm font-medium mb-2">Content Type</label>
-          <Select value={selectedContentType} onValueChange={setSelectedContentType}>
+          <Select value={form.contentType} onValueChange={(v) => handleChange('contentType', v)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select content type to upload" />
             </SelectTrigger>
@@ -66,20 +91,20 @@ const CreatorDashboard = () => {
           </Select>
         </div>
 
-        {selectedContentType === 'ai' && (
+        {form.contentType === 'ai' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">AI Content Prompt</label>
               <Textarea 
-                placeholder="Describe what you want to create (e.g., 'Write a blog post about blockchain technology' or 'Generate a creative story about space exploration')..." 
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Describe what you want to create..." 
+                value={form.aiPrompt}
+                onChange={(e) => handleChange('aiPrompt', e.target.value)}
                 rows={4}
                 className="resize-none"
               />
             </div>
             <div className="flex gap-2">
-              <Select defaultValue="blog">
+              <Select value={form.aiType} onValueChange={(v) => handleChange('aiType', v)}>
                 <SelectTrigger className="w-48">
                   <SelectValue />
                 </SelectTrigger>
@@ -93,7 +118,7 @@ const CreatorDashboard = () => {
               </Select>
               <Button 
                 onClick={handleAiGenerate}
-                disabled={!aiPrompt.trim() || isGenerating}
+                disabled={!form.aiPrompt.trim() || isGenerating}
                 className="gradient-primary text-white"
               >
                 {isGenerating ? '🤖 Generating...' : '✨ Generate with AI'}
@@ -102,18 +127,20 @@ const CreatorDashboard = () => {
           </div>
         )}
 
-        {selectedContentType === 'blog' && (
+        {form.contentType === 'blog' && (
           <div className="space-y-4">
-            <Input placeholder="Blog post title" />
+            <Input placeholder="Blog post title" value={form.blogTitle} onChange={e => handleChange('blogTitle', e.target.value)} />
             <Textarea 
               placeholder="Write your blog post content here (Markdown supported)..." 
               rows={8}
               className="resize-none"
+              value={form.blogContent}
+              onChange={e => handleChange('blogContent', e.target.value)}
             />
           </div>
         )}
 
-        {(selectedContentType === 'video' || selectedContentType === 'image' || selectedContentType === 'music') && (
+        {(form.contentType === 'video' || form.contentType === 'image' || form.contentType === 'music') && (
           <div className="space-y-4">
             <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
               <input
@@ -122,43 +149,59 @@ const CreatorDashboard = () => {
                 className="hidden"
                 id="file-upload"
                 accept={
-                  selectedContentType === 'video' ? 'video/*' :
-                  selectedContentType === 'image' ? 'image/*' :
+                  form.contentType === 'video' ? 'video/*' :
+                  form.contentType === 'image' ? 'image/*' :
                   'audio/*'
                 }
               />
               <label htmlFor="file-upload" className="cursor-pointer">
                 <div className="text-4xl mb-2">
-                  {selectedContentType === 'video' ? '🎬' : 
-                   selectedContentType === 'image' ? '🖼️' : '🎵'}
+                  {form.contentType === 'video' ? '🎬' : 
+                   form.contentType === 'image' ? '🖼️' : '🎵'}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Click to upload or drag and drop your file here
                 </p>
               </label>
-              {uploadedFile && (
+              {form.uploadedFile && (
                 <p className="mt-2 text-sm text-primary">
-                  Uploaded: {uploadedFile.name}
+                  Uploaded: {form.uploadedFile.name}
                 </p>
               )}
             </div>
-            <Input placeholder="Or paste URL/link here" />
+            <Input 
+              placeholder="Or paste URL/link here" 
+              value={
+                form.contentType === 'video' ? form.videoUrl :
+                form.contentType === 'image' ? form.imageUrl :
+                form.musicUrl
+              }
+              onChange={e => handleChange(
+                form.contentType === 'video' ? 'videoUrl' :
+                form.contentType === 'image' ? 'imageUrl' :
+                'musicUrl',
+                e.target.value
+              )}
+            />
           </div>
         )}
 
-        {selectedContentType === 'code' && (
+        {form.contentType === 'code' && (
           <div className="space-y-4">
-            <Input placeholder="GitHub repository URL" />
+            <Input placeholder="GitHub repository URL" value={form.codeRepoUrl} onChange={e => handleChange('codeRepoUrl', e.target.value)} />
             <Textarea 
               placeholder="Repository description and documentation..." 
               rows={4}
+              value={form.codeDescription}
+              onChange={e => handleChange('codeDescription', e.target.value)}
             />
           </div>
         )}
 
         <Button 
           className="w-full gradient-primary text-white hover-glow" 
-          disabled={!selectedContentType}
+          disabled={!form.contentType}
+          onClick={handleContinue}
         >
           Continue to Tokenization →
         </Button>
