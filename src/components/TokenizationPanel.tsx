@@ -9,6 +9,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { createCoin, DeployCurrency } from "@zoralabs/coins-sdk";
 import { createPublicClient, http, Address } from "viem";
 import { base } from "viem/chains";
+import { uploadFileToPinata, uploadJSONToPinata, getPinataGatewayUrl } from '@/lib/pinata';
 
 interface TokenizationPanelProps {
   creatorData: any;
@@ -37,17 +38,6 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
     transport: http(), // Use your preferred RPC URL or default
   });
 
-  // Build coinParams from user input
-  const coinParams = {
-    name: tokenData.name,
-    symbol: tokenData.symbol,
-    uri: `ipfs://bafybeigoxzqzbnxsn35vq7lls3ljxdcwjafxvbvkivprsodzrptpiguysy` as const, // TODO: use real metadata
-    payoutRecipient: address as Address,
-    // platformReferrer: "0x...", // Optional
-    chainId: base.id,
-    currency: DeployCurrency.ZORA,
-  };
-
   const handleCreateCoin = async () => {
     setLoading(true);
     setError(null);
@@ -55,23 +45,79 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
     setTxHash(null);
     setPending(false);
     try {
+      // 1. Prepare metadata based on content type
+      let metadata: any = {};
+      let fileCid: string | null = null;
+      let uri: string = '';
+      const type = creatorData?.contentType || tokenData.contentType;
+      if (type === 'blog') {
+        metadata = {
+          name: creatorData.blogTitle,
+          description: creatorData.blogContent.slice(0, 200),
+          type: 'blog',
+        };
+        uri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+      } else if (type === 'code') {
+        metadata = {
+          name: creatorData.codeRepoUrl,
+          description: creatorData.codeDescription,
+          type: 'code',
+        };
+        uri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+      } else if (type === 'video' || type === 'image' || type === 'music') {
+        if (creatorData.uploadedFile) {
+          fileCid = await uploadFileToPinata(creatorData.uploadedFile);
+          metadata = {
+            name: creatorData.uploadedFile.name,
+            description: `${type} uploaded by user`,
+            type,
+            file: getPinataGatewayUrl(fileCid),
+          };
+          uri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+        } else if (creatorData.videoUrl || creatorData.imageUrl || creatorData.musicUrl) {
+          metadata = {
+            name: creatorData.videoUrl || creatorData.imageUrl || creatorData.musicUrl,
+            description: `${type} link provided by user`,
+            type,
+            url: creatorData.videoUrl || creatorData.imageUrl || creatorData.musicUrl,
+          };
+          uri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+        } else {
+          throw new Error('No file or URL provided for media upload.');
+        }
+      } else if (type === 'ai') {
+        metadata = {
+          name: creatorData.aiPrompt,
+          description: 'AI generated content',
+          type: creatorData.aiType,
+        };
+        uri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+      } else {
+        throw new Error('Unsupported content type or missing data.');
+      }
+
+      // 2. Build coinParams from user input and uploaded metadata
+      const coinParams = {
+        name: tokenData.name || metadata.name,
+        symbol: tokenData.symbol,
+        uri: uri as const,
+        payoutRecipient: address as Address,
+        chainId: base.id,
+        currency: DeployCurrency.ZORA,
+      };
+
       const res = await createCoin(coinParams, walletClient, publicClient, {
         gasMultiplier: 120,
       });
       setResult(res);
       setTxHash(res.hash);
     } catch (e: any) {
+      setError(e?.message || 'Error creating coin or uploading to Pinata.');
       if (e?.hash) {
         setTxHash(e.hash);
       }
       if (e?.message?.includes('Timed out while waiting for transaction')) {
-        setError(
-          `Transaction is taking longer than expected. You can check the status here: ` +
-          (e.hash ? `<a href="https://basescan.org/tx/${e.hash}" target="_blank" rel="noopener noreferrer" class="underline text-blue-700">${e.hash}</a>` : '')
-        );
         setPending(true);
-      } else {
-        setError(e?.message || "Error creating coin");
       }
     } finally {
       setLoading(false);
