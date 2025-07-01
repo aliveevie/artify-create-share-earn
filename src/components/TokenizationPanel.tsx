@@ -41,7 +41,7 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
   const coinParams = {
     name: tokenData.name,
     symbol: tokenData.symbol,
-    uri: "ipfs://bafybeigoxzqzbnxsn35vq7lls3ljxdcwjafxvbvkivprsodzrptpiguysy", // TODO: use real metadata
+    uri: `ipfs://bafybeigoxzqzbnxsn35vq7lls3ljxdcwjafxvbvkivprsodzrptpiguysy` as const, // TODO: use real metadata
     payoutRecipient: address as Address,
     // platformReferrer: "0x...", // Optional
     chainId: base.id,

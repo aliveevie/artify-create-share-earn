@@ -5,12 +5,12 @@ import NotFound from "./pages/NotFound";
 import "@rainbow-me/rainbowkit/styles.css";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
-import { base, baseSepolia } from "wagmi/chains";
+import { base } from "wagmi/chains";
 
 const config = getDefaultConfig({
   appName: "Artify",
   projectId: import.meta.env.VITE_WC_PROJECT_ID,
-  chains: [base, baseSepolia],
+  chains: [base],
 });
 
 const queryClient = new QueryClient();
