@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { uploadFileToPinata, uploadJSONToPinata } from '@/lib/pinata';
 
 // Add prop for passing collected data to parent (for tokenization)
 interface CreatorDashboardProps {
@@ -26,6 +27,8 @@ const CreatorDashboard = ({ onContinue }: CreatorDashboardProps) => {
     aiType: 'blog',
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [stage, setStage] = useState<'idle' | 'uploading' | 'ready' | 'error'>('idle');
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const contentTypes = [
     { value: 'blog', label: '📝 Blog Post', description: 'Articles, tutorials, written content' },
@@ -59,9 +62,109 @@ const CreatorDashboard = ({ onContinue }: CreatorDashboardProps) => {
     }, 2000);
   };
 
+  // Helper to generate an image from text (for non-image content)
+  async function generateImageFromText(text: string): Promise<File> {
+    // Create a canvas and draw the text, then convert to blob and File
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#222';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text.slice(0, 80), canvas.width / 2, canvas.height / 2);
+    return new Promise<File>((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(new File([blob!], 'description.png', { type: 'image/png' }));
+      }, 'image/png');
+    });
+  }
+
   // Unified continue handler
-  const handleContinue = () => {
-    onContinue(form);
+  const handleContinue = async () => {
+    setStage('uploading');
+    setUploadError(null);
+    try {
+      let ipfsUri = '';
+      let imageUri = '';
+      let metadata: any = {};
+      const type = form.contentType;
+      if (type === 'blog') {
+        metadata = {
+          name: form.blogTitle,
+          description: form.blogContent.slice(0, 200),
+          type: 'blog',
+        };
+        // Generate image from description
+        const imgFile = await generateImageFromText(metadata.description);
+        const imgCid = await uploadFileToPinata(imgFile);
+        imageUri = `ipfs://${imgCid}`;
+        metadata.image = imageUri;
+        ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+      } else if (type === 'code') {
+        metadata = {
+          name: form.codeRepoUrl,
+          description: form.codeDescription,
+          type: 'code',
+        };
+        // Generate image from description
+        const imgFile = await generateImageFromText(metadata.description);
+        const imgCid = await uploadFileToPinata(imgFile);
+        imageUri = `ipfs://${imgCid}`;
+        metadata.image = imageUri;
+        ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+      } else if (type === 'video' || type === 'image' || type === 'music') {
+        if (form.uploadedFile) {
+          const fileCid = await uploadFileToPinata(form.uploadedFile);
+          imageUri = `ipfs://${fileCid}`;
+          metadata = {
+            name: form.uploadedFile.name,
+            description: `${type} uploaded by user`,
+            type,
+            file: imageUri,
+            image: imageUri,
+          };
+          ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+        } else if (form.videoUrl || form.imageUrl || form.musicUrl) {
+          metadata = {
+            name: form.videoUrl || form.imageUrl || form.musicUrl,
+            description: `${type} link provided by user`,
+            type,
+            url: form.videoUrl || form.imageUrl || form.musicUrl,
+          };
+          // Generate image from description
+          const imgFile = await generateImageFromText(metadata.description);
+          const imgCid = await uploadFileToPinata(imgFile);
+          imageUri = `ipfs://${imgCid}`;
+          metadata.image = imageUri;
+          ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+        } else {
+          throw new Error('No file or URL provided for media upload.');
+        }
+      } else if (type === 'ai') {
+        metadata = {
+          name: form.aiPrompt,
+          description: 'AI generated content',
+          type: form.aiType,
+        };
+        // Generate image from description
+        const imgFile = await generateImageFromText(metadata.name);
+        const imgCid = await uploadFileToPinata(imgFile);
+        imageUri = `ipfs://${imgCid}`;
+        metadata.image = imageUri;
+        ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+      } else {
+        throw new Error('Unsupported content type or missing data.');
+      }
+      setStage('ready');
+      onContinue({ ...form, ipfsUri, imageUri, metadata });
+    } catch (e: any) {
+      setUploadError(e?.message || 'Error uploading to IPFS.');
+      setStage('error');
+    }
   };
 
   return (
@@ -200,11 +303,13 @@ const CreatorDashboard = ({ onContinue }: CreatorDashboardProps) => {
 
         <Button 
           className="w-full gradient-primary text-white hover-glow" 
-          disabled={!form.contentType}
+          disabled={!form.contentType || stage === 'uploading'}
           onClick={handleContinue}
         >
-          Continue to Tokenization →
+          {stage === 'uploading' ? 'Uploading to IPFS...' : 'Continue to Tokenization →'}
         </Button>
+        {stage === 'uploading' && <div className="text-sm text-blue-600 mt-2">Uploading to IPFS, please wait...</div>}
+        {stage === 'error' && <div className="text-sm text-red-600 mt-2">{uploadError}</div>}
       </CardContent>
     </Card>
   );

@@ -31,94 +31,45 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [stage, setStage] = useState<'ready' | 'minting' | 'done' | 'error'>('ready');
 
   // Use the user's selected chain, or default to base
   const publicClient = createPublicClient({
     chain: base,
-    transport: http(), // Use your preferred RPC URL or default
+    transport: http(),
   });
 
   const handleCreateCoin = async () => {
     setLoading(true);
+    setStage('minting');
     setError(null);
     setResult(null);
     setTxHash(null);
     setPending(false);
     try {
-      // 1. Prepare metadata based on content type
-      let metadata: any = {};
-      let fileCid: string | null = null;
-      let uri: string = '';
-      const type = creatorData?.contentType || tokenData.contentType;
-      if (type === 'blog') {
-        metadata = {
-          name: creatorData.blogTitle,
-          description: creatorData.blogContent.slice(0, 200),
-          type: 'blog',
-        };
-        uri = `ipfs://${await uploadJSONToPinata(metadata)}`;
-      } else if (type === 'code') {
-        metadata = {
-          name: creatorData.codeRepoUrl,
-          description: creatorData.codeDescription,
-          type: 'code',
-        };
-        uri = `ipfs://${await uploadJSONToPinata(metadata)}`;
-      } else if (type === 'video' || type === 'image' || type === 'music') {
-        if (creatorData.uploadedFile) {
-          fileCid = await uploadFileToPinata(creatorData.uploadedFile);
-          metadata = {
-            name: creatorData.uploadedFile.name,
-            description: `${type} uploaded by user`,
-            type,
-            file: getPinataGatewayUrl(fileCid),
-          };
-          uri = `ipfs://${await uploadJSONToPinata(metadata)}`;
-        } else if (creatorData.videoUrl || creatorData.imageUrl || creatorData.musicUrl) {
-          metadata = {
-            name: creatorData.videoUrl || creatorData.imageUrl || creatorData.musicUrl,
-            description: `${type} link provided by user`,
-            type,
-            url: creatorData.videoUrl || creatorData.imageUrl || creatorData.musicUrl,
-          };
-          uri = `ipfs://${await uploadJSONToPinata(metadata)}`;
-        } else {
-          throw new Error('No file or URL provided for media upload.');
-        }
-      } else if (type === 'ai') {
-        metadata = {
-          name: creatorData.aiPrompt,
-          description: 'AI generated content',
-          type: creatorData.aiType,
-        };
-        uri = `ipfs://${await uploadJSONToPinata(metadata)}`;
-      } else {
-        throw new Error('Unsupported content type or missing data.');
-      }
-
-      // 2. Build coinParams from user input and uploaded metadata
       const coinParams = {
-        name: tokenData.name || metadata.name,
+        name: tokenData.name || creatorData.metadata?.name,
         symbol: tokenData.symbol,
-        uri: uri as const,
+        uri: creatorData.ipfsUri,
         payoutRecipient: address as Address,
         chainId: base.id,
         currency: DeployCurrency.ZORA,
       };
-
       const res = await createCoin(coinParams, walletClient, publicClient, {
         gasMultiplier: 120,
       });
       setResult(res);
       setTxHash(res.hash);
+      setStage('done');
     } catch (e: any) {
-      setError(e?.message || 'Error creating coin or uploading to Pinata.');
+      setError(e?.message || 'Error creating coin.');
       if (e?.hash) {
         setTxHash(e.hash);
       }
       if (e?.message?.includes('Timed out while waiting for transaction')) {
         setPending(true);
       }
+      setStage('error');
     } finally {
       setLoading(false);
     }
@@ -148,68 +99,19 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
       </CardHeader>
       <CardContent className="space-y-6">
         <Button variant="outline" onClick={onBack} className="mb-2">← Back</Button>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Coin Name *</label>
-            <Input 
-              placeholder="e.g., My Creative Coin"
-              value={tokenData.name}
-              onChange={(e) => setTokenData(prev => ({ ...prev, name: e.target.value }))}
-            />
+        {/* Show metadata preview and image if available */}
+        {creatorData.metadata?.image && (
+          <div className="flex justify-center mb-4">
+            <img src={creatorData.metadata.image.replace('ipfs://', `https://coral-absolute-bee-687.mypinata.cloud/ipfs/`)} alt="Preview" className="rounded-lg max-h-64" />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Symbol *</label>
-            <Input 
-              placeholder="e.g., MCC"
-              value={tokenData.symbol}
-              onChange={(e) => setTokenData(prev => ({ ...prev, symbol: e.target.value.toUpperCase() }))}
-              maxLength={6}
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Description</label>
-          <Textarea 
-            placeholder="Describe your content and what makes it valuable..."
-            value={tokenData.description}
-            onChange={(e) => setTokenData(prev => ({ ...prev, description: e.target.value }))}
-            rows={3}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Content Type</label>
-            <Select value={tokenData.contentType} onValueChange={(value) => setTokenData(prev => ({ ...prev, contentType: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="blog">📝 Blog Post</SelectItem>
-                <SelectItem value="video">🎥 Video</SelectItem>
-                <SelectItem value="image">🖼️ Image/Art</SelectItem>
-                <SelectItem value="music">🎵 Music</SelectItem>
-                <SelectItem value="code">💻 Code</SelectItem>
-                <SelectItem value="ai">🤖 AI Generated</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Initial Supply</label>
-            <Input 
-              type="number"
-              placeholder="1000"
-              value={tokenData.initialSupply}
-              onChange={(e) => setTokenData(prev => ({ ...prev, initialSupply: e.target.value }))}
-            />
-          </div>
-        </div>
+        )}
         <div className="bg-muted/30 rounded-lg p-4">
-          <h4 className="font-medium mb-2">Token Preview</h4>
+          <h4 className="font-medium mb-2">Metadata Preview</h4>
           <div className="space-y-1 text-sm text-muted-foreground">
-            <p><strong>Name:</strong> {tokenData.name || 'Not set'}</p>
-            <p><strong>Symbol:</strong> {tokenData.symbol || 'Not set'}</p>
-            <p><strong>Supply:</strong> {tokenData.initialSupply} tokens</p>
-            <p><strong>Type:</strong> {tokenData.contentType || 'Not selected'}</p>
+            <p><strong>Name:</strong> {creatorData.metadata?.name || 'Not set'}</p>
+            <p><strong>Description:</strong> {creatorData.metadata?.description || 'Not set'}</p>
+            <p><strong>Type:</strong> {creatorData.metadata?.type || 'Not set'}</p>
+            <p><strong>IPFS URI:</strong> <a href={creatorData.ipfsUri.replace('ipfs://', 'https://coral-absolute-bee-687.mypinata.cloud/ipfs/')} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{creatorData.ipfsUri}</a></p>
           </div>
         </div>
         {txHash && (
@@ -241,13 +143,16 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
         <Button
           onClick={handleCreateCoin}
           className="w-full gradient-primary text-white text-lg py-6 hover-glow mt-4"
-          disabled={loading || !tokenData.name || !tokenData.symbol}
+          disabled={loading || !creatorData.ipfsUri}
         >
-          {loading ? '⏳ Creating...' : '🚀 Create Your Coin'}
+          {loading ? '⏳ Minting...' : '🚀 Mint Your Coin'}
         </Button>
         <p className="text-xs text-muted-foreground text-center">
           By minting, you agree to our terms and confirm ownership of the content.
         </p>
+        {stage === 'minting' && <div className="text-sm text-blue-600 mt-2">Minting your token, please wait...</div>}
+        {stage === 'done' && <div className="text-sm text-green-600 mt-2">Minting complete!</div>}
+        {stage === 'error' && <div className="text-sm text-red-600 mt-2">{error}</div>}
       </CardContent>
     </Card>
   );
