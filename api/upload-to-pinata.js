@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import formidable from 'formidable';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
@@ -12,7 +11,7 @@ export const config = {
 
 const PINATA_JWT = process.env.VITE_JWT;
 
-async function handleFileUpload(req: VercelRequest, res: VercelResponse) {
+async function handleFileUpload(req, res) {
   console.log('Starting file upload handler');
   try {
     const form = formidable();
@@ -32,19 +31,20 @@ async function handleFileUpload(req: VercelRequest, res: VercelResponse) {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${PINATA_JWT}`,
+        ...data.getHeaders(),
       },
-      body: data as any,
+      body: data,
     });
     const result = await response.json();
     console.log('Pinata response:', result);
     res.status(response.status).json(result);
-  } catch (e: any) {
+  } catch (e) {
     console.error('Pinata upload failed:', e);
     res.status(500).json({ error: e.message || 'Pinata upload failed' });
   }
 }
 
-async function handleJsonUpload(req: VercelRequest, res: VercelResponse) {
+async function handleJsonUpload(req, res) {
   console.log('Starting JSON upload handler');
   let body = '';
   req.on('data', chunk => { body += chunk; });
@@ -53,26 +53,30 @@ async function handleJsonUpload(req: VercelRequest, res: VercelResponse) {
       const json = JSON.parse(body);
       console.log('JSON received:', json);
       const data = new FormData();
-      data.append('file', Buffer.from(JSON.stringify(json)), { filename: 'metadata.json', contentType: 'application/json' });
+      data.append('file', Buffer.from(JSON.stringify(json)), {
+        filename: 'metadata.json',
+        contentType: 'application/json',
+      });
       data.append('network', 'public');
       const response = await fetch('https://uploads.pinata.cloud/v3/files', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${PINATA_JWT}`,
+          ...data.getHeaders(),
         },
-        body: data as any,
+        body: data,
       });
       const result = await response.json();
       console.log('Pinata response:', result);
       res.status(response.status).json(result);
-    } catch (e: any) {
+    } catch (e) {
       console.error('Pinata JSON upload failed:', e);
       res.status(500).json({ error: e.message || 'Pinata JSON upload failed' });
     }
   });
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   console.log('API route hit:', req.method, req.url);
   if (req.method !== 'POST') {
     console.error('Method not allowed:', req.method);
