@@ -9,7 +9,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { createCoin, DeployCurrency } from "@zoralabs/coins-sdk";
 import { createPublicClient, http, Address } from "viem";
 import { base } from "viem/chains";
-import { uploadFileToPinata, uploadJSONToPinata, getPinataGatewayUrl } from '@/lib/pinata';
+
 
 interface TokenizationPanelProps {
   creatorData: any;
