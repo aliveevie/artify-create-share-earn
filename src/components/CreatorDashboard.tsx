@@ -25,6 +25,8 @@ const CreatorDashboard = ({ onContinue }: CreatorDashboardProps) => {
     codeRepoUrl: '',
     codeDescription: '',
     aiType: 'blog',
+    mediaDescription: '',
+    repoDescription: '',
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [stage, setStage] = useState<'idle' | 'uploading' | 'ready' | 'error'>('idle');
@@ -90,75 +92,127 @@ const CreatorDashboard = ({ onContinue }: CreatorDashboardProps) => {
     try {
       let ipfsUri = '';
       let imageUri = '';
+      let fileUri = '';
       let metadata: any = {};
       const type = form.contentType;
+      let description = '';
+      let name = '';
       if (type === 'blog') {
+        name = form.blogTitle || 'Untitled Blog';
+        description = form.blogContent.slice(0, 200) || 'No description provided.';
         metadata = {
-          name: form.blogTitle,
-          description: form.blogContent.slice(0, 200),
+          name,
+          description,
           type: 'blog',
         };
         // Generate image from description
-        const imgFile = await generateImageFromText(metadata.description);
+        const imgFile = await generateImageFromText(description);
         const imgCid = await uploadFileToPinata(imgFile);
         imageUri = `ipfs://${imgCid}`;
         metadata.image = imageUri;
-        ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
       } else if (type === 'code') {
+        name = form.codeRepoUrl || 'Untitled Repo';
+        description = form.codeDescription || form.repoDescription || 'No description provided.';
         metadata = {
-          name: form.codeRepoUrl,
-          description: form.codeDescription,
+          name,
+          description,
           type: 'code',
         };
         // Generate image from description
-        const imgFile = await generateImageFromText(metadata.description);
+        const imgFile = await generateImageFromText(description);
         const imgCid = await uploadFileToPinata(imgFile);
         imageUri = `ipfs://${imgCid}`;
         metadata.image = imageUri;
-        ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
-      } else if (type === 'video' || type === 'image' || type === 'music') {
+      } else if (type === 'image') {
         if (form.uploadedFile) {
+          name = form.uploadedFile.name;
+          description = form.mediaDescription || 'image uploaded by user';
+          // Upload file to Pinata
           const fileCid = await uploadFileToPinata(form.uploadedFile);
           imageUri = `ipfs://${fileCid}`;
+          fileUri = imageUri;
           metadata = {
-            name: form.uploadedFile.name,
-            description: `${type} uploaded by user`,
+            name,
+            description,
             type,
-            file: imageUri,
             image: imageUri,
+            file: fileUri,
           };
-          ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
-        } else if (form.videoUrl || form.imageUrl || form.musicUrl) {
-          metadata = {
-            name: form.videoUrl || form.imageUrl || form.musicUrl,
-            description: `${type} link provided by user`,
-            type,
-            url: form.videoUrl || form.imageUrl || form.musicUrl,
-          };
+        } else if (form.imageUrl) {
+          name = form.imageUrl;
+          description = form.mediaDescription || 'image link provided by user';
           // Generate image from description
-          const imgFile = await generateImageFromText(metadata.description);
+          const imgFile = await generateImageFromText(description);
           const imgCid = await uploadFileToPinata(imgFile);
           imageUri = `ipfs://${imgCid}`;
-          metadata.image = imageUri;
-          ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
+          metadata = {
+            name,
+            description,
+            type,
+            url: form.imageUrl,
+            image: imageUri,
+          };
+        } else {
+          throw new Error('No file or URL provided for image upload.');
+        }
+      } else if (type === 'video' || type === 'music') {
+        if (form.uploadedFile) {
+          name = form.uploadedFile.name;
+          description = form.mediaDescription || `${type} uploaded by user`;
+          // Upload file to Pinata
+          const fileCid = await uploadFileToPinata(form.uploadedFile);
+          fileUri = `ipfs://${fileCid}`;
+          // Generate image from description
+          const imgFile = await generateImageFromText(description);
+          const imgCid = await uploadFileToPinata(imgFile);
+          imageUri = `ipfs://${imgCid}`;
+          metadata = {
+            name,
+            description,
+            type,
+            file: fileUri,
+            image: imageUri,
+          };
+        } else if (form.videoUrl || form.musicUrl) {
+          name = form.videoUrl || form.musicUrl;
+          description = form.mediaDescription || `${type} link provided by user`;
+          // Generate image from description
+          const imgFile = await generateImageFromText(description);
+          const imgCid = await uploadFileToPinata(imgFile);
+          imageUri = `ipfs://${imgCid}`;
+          metadata = {
+            name,
+            description,
+            type,
+            url: form.videoUrl || form.musicUrl,
+            image: imageUri,
+          };
         } else {
           throw new Error('No file or URL provided for media upload.');
         }
       } else if (type === 'ai') {
+        name = form.aiPrompt || 'AI Generated Content';
+        description = 'AI generated content';
         metadata = {
-          name: form.aiPrompt,
-          description: 'AI generated content',
+          name,
+          description,
           type: form.aiType,
         };
         // Generate image from description
-        const imgFile = await generateImageFromText(metadata.name);
+        const imgFile = await generateImageFromText(description);
         const imgCid = await uploadFileToPinata(imgFile);
         imageUri = `ipfs://${imgCid}`;
         metadata.image = imageUri;
-        ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
       } else {
         throw new Error('Unsupported content type or missing data.');
       }
+      // Add file or url if present
+      if (fileUri) metadata.file = fileUri;
+      if (form.videoUrl) metadata.url = form.videoUrl;
+      if (form.imageUrl) metadata.url = form.imageUrl;
+      if (form.musicUrl) metadata.url = form.musicUrl;
+      // Upload metadata to Pinata
+      ipfsUri = `ipfs://${await uploadJSONToPinata(metadata)}`;
       setStage('ready');
       onContinue({ ...form, ipfsUri, imageUri, metadata });
     } catch (e: any) {
@@ -286,6 +340,13 @@ const CreatorDashboard = ({ onContinue }: CreatorDashboardProps) => {
                 e.target.value
               )}
             />
+            <Textarea
+              placeholder={`Describe your ${form.contentType} (optional, improves discoverability)`}
+              value={form.mediaDescription}
+              onChange={e => handleChange('mediaDescription', e.target.value)}
+              rows={2}
+              className="resize-none"
+            />
           </div>
         )}
 
@@ -297,6 +358,13 @@ const CreatorDashboard = ({ onContinue }: CreatorDashboardProps) => {
               rows={4}
               value={form.codeDescription}
               onChange={e => handleChange('codeDescription', e.target.value)}
+            />
+            <Textarea
+              placeholder="Additional repo description (optional)"
+              value={form.repoDescription}
+              onChange={e => handleChange('repoDescription', e.target.value)}
+              rows={2}
+              className="resize-none"
             />
           </div>
         )}

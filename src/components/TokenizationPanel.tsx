@@ -20,11 +20,12 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
   const { address, chain } = useAccount();
   const { data: walletClient } = useWalletClient();
   const [tokenData, setTokenData] = useState({
-    name: '',
+    name: creatorData.metadata?.name || '',
     symbol: '',
-    description: '',
+    description: creatorData.metadata?.description || '',
+    type: creatorData.metadata?.type || '',
+    image: creatorData.metadata?.image || '',
     initialSupply: '1000',
-    contentType: ''
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -32,12 +33,32 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [stage, setStage] = useState<'ready' | 'minting' | 'done' | 'error'>('ready');
+  const [ipfsUri, setIpfsUri] = useState<string>(creatorData.ipfsUri);
 
   // Use the user's selected chain, or default to base
   const publicClient = createPublicClient({
     chain: base,
     transport: http(),
   });
+
+  // Handle field changes
+  const handleFieldChange = (field: string, value: string) => {
+    setTokenData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Upload updated metadata to Pinata and get new ipfsUri
+  const uploadUpdatedMetadata = async () => {
+    const updatedMetadata = {
+      name: tokenData.name,
+      description: tokenData.description,
+      type: tokenData.type,
+      image: tokenData.image,
+    };
+    // Use the same uploadJSONToPinata as in CreatorDashboard
+    const { uploadJSONToPinata } = await import('@/lib/pinata');
+    const newCid = await uploadJSONToPinata(updatedMetadata);
+    return `ipfs://${newCid}`;
+  };
 
   const handleCreateCoin = async () => {
     setLoading(true);
@@ -47,10 +68,13 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
     setTxHash(null);
     setPending(false);
     try {
+      // Upload updated metadata to Pinata
+      const newIpfsUri = await uploadUpdatedMetadata();
+      setIpfsUri(newIpfsUri);
       const coinParams = {
-        name: tokenData.name || creatorData.metadata?.name,
+        name: tokenData.name,
         symbol: tokenData.symbol,
-        uri: creatorData.ipfsUri,
+        uri: newIpfsUri,
         payoutRecipient: address as Address,
         chainId: base.id,
         currency: DeployCurrency.ZORA,
@@ -99,19 +123,64 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
       </CardHeader>
       <CardContent className="space-y-6">
         <Button variant="outline" onClick={onBack} className="mb-2">← Back</Button>
-        {/* Show metadata preview and image if available */}
-        {creatorData.metadata?.image && (
+        {/* Editable metadata fields */}
+        <div className="bg-muted/30 rounded-lg p-4">
+          <h4 className="font-medium mb-2">Edit Metadata</h4>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Name</label>
+            <Input
+              placeholder="Token Name"
+              value={tokenData.name}
+              onChange={e => handleFieldChange('name', e.target.value)}
+            />
+            <label className="block text-sm font-medium">Symbol</label>
+            <Input
+              placeholder="Token Symbol (e.g. ART)"
+              value={tokenData.symbol}
+              onChange={e => handleFieldChange('symbol', e.target.value)}
+            />
+            <label className="block text-sm font-medium">Description</label>
+            <Textarea
+              placeholder="Description"
+              value={tokenData.description}
+              onChange={e => handleFieldChange('description', e.target.value)}
+              rows={3}
+            />
+            <label className="block text-sm font-medium">Type</label>
+            <Input
+              placeholder="Type (e.g. blog, image, code, etc.)"
+              value={tokenData.type}
+              onChange={e => handleFieldChange('type', e.target.value)}
+            />
+            <label className="block text-sm font-medium">Image URI</label>
+            <Input
+              placeholder="Image IPFS URI"
+              value={tokenData.image}
+              onChange={e => handleFieldChange('image', e.target.value)}
+            />
+            <label className="block text-sm font-medium">Initial Supply</label>
+            <Input
+              placeholder="Initial Supply"
+              value={tokenData.initialSupply}
+              onChange={e => handleFieldChange('initialSupply', e.target.value)}
+              type="number"
+            />
+          </div>
+        </div>
+        {/* Live preview */}
+        {tokenData.image && (
           <div className="flex justify-center mb-4">
-            <img src={creatorData.metadata.image.replace('ipfs://', `https://coral-absolute-bee-687.mypinata.cloud/ipfs/`)} alt="Preview" className="rounded-lg max-h-64" />
+            <img src={tokenData.image.replace('ipfs://', `https://coral-absolute-bee-687.mypinata.cloud/ipfs/`)} alt="Preview" className="rounded-lg max-h-64" />
           </div>
         )}
         <div className="bg-muted/30 rounded-lg p-4">
           <h4 className="font-medium mb-2">Metadata Preview</h4>
           <div className="space-y-1 text-sm text-muted-foreground">
-            <p><strong>Name:</strong> {creatorData.metadata?.name || 'Not set'}</p>
-            <p><strong>Description:</strong> {creatorData.metadata?.description || 'Not set'}</p>
-            <p><strong>Type:</strong> {creatorData.metadata?.type || 'Not set'}</p>
-            <p><strong>IPFS URI:</strong> <a href={creatorData.ipfsUri.replace('ipfs://', 'https://coral-absolute-bee-687.mypinata.cloud/ipfs/')} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{creatorData.ipfsUri}</a></p>
+            <p><strong>Name:</strong> {tokenData.name || 'Not set'}</p>
+            <p><strong>Description:</strong> {tokenData.description || 'Not set'}</p>
+            <p><strong>Type:</strong> {tokenData.type || 'Not set'}</p>
+            <p><strong>Image:</strong> {tokenData.image || 'Not set'}</p>
+            <p><strong>IPFS URI:</strong> <a href={ipfsUri.replace('ipfs://', 'https://coral-absolute-bee-687.mypinata.cloud/ipfs/')} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{ipfsUri}</a></p>
           </div>
         </div>
         {txHash && (
