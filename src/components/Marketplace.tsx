@@ -7,7 +7,7 @@ import { getAllTokens, TokenData } from '@/lib/dataStorage';
 import { fetchMultipleCoins, convertTokenToMarketplaceItem, ZoraCoinData, fetchTokensByOwner } from '@/lib/zoraApi';
 import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
 import { tradeCoin } from '@zoralabs/coins-sdk';
-import { parseEther } from 'viem';
+import { parseEther, erc20Abi, parseUnits } from 'viem';
 
 const filterOptions = [
   { value: 'all', label: '🌟 All Content' },
@@ -27,14 +27,11 @@ const Marketplace = () => {
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
 
-  // Modal state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<'buy' | 'sell' | null>(null);
-  const [modalToken, setModalToken] = useState<any>(null);
-  const [amount, setAmount] = useState('');
-  const [txLoading, setTxLoading] = useState(false);
-  const [txError, setTxError] = useState<string | null>(null);
-  const [txSuccess, setTxSuccess] = useState<string | null>(null);
+  // Transaction feedback state
+  const [txLoadingId, setTxLoadingId] = useState<string | null>(null);
+  const [txErrorId, setTxErrorId] = useState<string | null>(null);
+  const [txSuccessId, setTxSuccessId] = useState<string | null>(null);
+  const [txMessage, setTxMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadTokens = async () => {
@@ -78,99 +75,146 @@ const Marketplace = () => {
     return matchesFilter && matchesSearch;
   });
 
-  // Modal logic
-  const openModal = (type: 'buy' | 'sell', token: any) => {
-    setModalType(type);
-    setModalToken(token);
-    setAmount('');
-    setTxError(null);
-    setTxSuccess(null);
-    setModalOpen(true);
-  };
-  const closeModal = () => {
-    setModalOpen(false);
-    setModalType(null);
-    setModalToken(null);
-    setAmount('');
-    setTxError(null);
-    setTxSuccess(null);
-  };
-  const handleTrade = async () => {
-    if (!modalToken || !amount || !currentAddress || !walletClient || !publicClient) return;
-    setTxLoading(true);
-    setTxError(null);
-    setTxSuccess(null);
+  // Helper to get token balance
+  const getTokenBalance = async (tokenAddress: string, userAddress: string) => {
+    if (!publicClient) return 0n;
     try {
-      let tradeParameters;
-      if (modalType === 'buy') {
-        tradeParameters = {
-          sell: { type: "eth" },
-          buy: { type: "erc20", address: modalToken.contractAddress },
-          amountIn: parseEther(amount),
-          slippage: 0.05,
-          sender: currentAddress,
-        };
-      } else {
-        tradeParameters = {
-          sell: { type: "erc20", address: modalToken.contractAddress },
-          buy: { type: "eth" },
-          amountIn: parseEther(amount),
-          slippage: 0.15,
-          sender: currentAddress,
-        };
-      }
+      const balance = await publicClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [userAddress as `0x${string}`],
+      });
+      return balance as bigint;
+    } catch {
+      return 0n;
+    }
+  };
+
+  // Helper to get token decimals
+  const getTokenDecimals = async (tokenAddress: string) => {
+    if (!publicClient) return 18;
+    try {
+      const decimals = await publicClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'decimals',
+        args: [],
+      });
+      return Number(decimals);
+    } catch {
+      return 18;
+    }
+  };
+
+  // One-click buy
+  const handleBuy = async (item: any) => {
+    if (!currentAddress || !walletClient || !publicClient) {
+      setTxErrorId(item.id);
+      setTxMessage('Please connect your wallet.');
+      setTxLoadingId(null);
+      return;
+    }
+    // Use the account from walletClient if available
+    const account = walletClient.account;
+    if (!account) {
+      setTxErrorId(item.id);
+      setTxMessage('Wallet client does not provide a valid account. Please reconnect your wallet.');
+      setTxLoadingId(null);
+      return;
+    }
+    setTxLoadingId(item.id);
+    setTxErrorId(null);
+    setTxSuccessId(null);
+    setTxMessage(null);
+    try {
+      const ethAmount = (item.price?.toString().replace(' ETH', '') || '0.00001').trim();
+      const tradeParameters = {
+        sell: { type: "eth" as const },
+        buy: { type: "erc20" as const, address: item.contractAddress as `0x${string}` },
+        amountIn: parseEther(ethAmount),
+        slippage: 0.05,
+        sender: currentAddress as `0x${string}`,
+      };
       const receipt = await tradeCoin({
         tradeParameters,
         walletClient,
-        account: { address: currentAddress },
+        account, // pass the full account object
         publicClient,
       });
-      setTxSuccess('Trade successful! Tx: ' + receipt.transactionHash);
+      setTxSuccessId(item.id);
+      setTxMessage('Trade successful! Tx: ' + receipt.transactionHash);
     } catch (e: any) {
-      setTxError(e?.message || 'Trade failed');
+      setTxErrorId(item.id);
+      setTxMessage(e?.message || 'Trade failed');
     }
-    setTxLoading(false);
+    setTxLoadingId(null);
+  };
+
+  // One-click sell (uses item.price as amount, not hardcoded)
+  const handleSell = async (item: any) => {
+    if (!currentAddress || !walletClient || !publicClient) {
+      setTxErrorId(item.id);
+      setTxMessage('Please connect your wallet.');
+      setTxLoadingId(null);
+      return;
+    }
+    const account = walletClient.account;
+    if (!account) {
+      setTxErrorId(item.id);
+      setTxMessage('Wallet client does not provide a valid account. Please reconnect your wallet.');
+      setTxLoadingId(null);
+      return;
+    }
+    setTxLoadingId(item.id);
+    setTxErrorId(null);
+    setTxSuccessId(null);
+    setTxMessage(null);
+    try {
+      const tokenAddress = item.contractAddress;
+      const decimals = await getTokenDecimals(tokenAddress);
+      // Use the price as the amount to sell (remove 'ETH', parse as string)
+      let tokenAmount = item.price?.toString().replace(' ETH', '').trim();
+      if (!tokenAmount || isNaN(Number(tokenAmount))) {
+        setTxErrorId(item.id);
+        setTxMessage('Invalid token amount.');
+        setTxLoadingId(null);
+        return;
+      }
+      // Convert to correct units
+      const amountIn = parseUnits(tokenAmount, decimals);
+      // Check user balance
+      const balance = await getTokenBalance(tokenAddress, currentAddress);
+      if (balance < amountIn) {
+        setTxErrorId(item.id);
+        setTxMessage('You do not have enough tokens to sell this amount.');
+        setTxLoadingId(null);
+        return;
+      }
+      const tradeParameters = {
+        sell: { type: "erc20" as const, address: tokenAddress as `0x${string}` },
+        buy: { type: "eth" as const },
+        amountIn,
+        slippage: 0.15,
+        sender: currentAddress as `0x${string}`,
+      };
+      const receipt = await tradeCoin({
+        tradeParameters,
+        walletClient,
+        account,
+        publicClient,
+      });
+      setTxSuccessId(item.id);
+      setTxMessage('Trade successful! Tx: ' + receipt.transactionHash);
+    } catch (e: any) {
+      setTxErrorId(item.id);
+      setTxMessage('This token cannot be sold right now. Please try again later.');
+    }
+    setTxLoadingId(null);
   };
 
   return (
     <section className="container mx-auto px-4 py-8">
-      {/* Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-2">
-              {modalType === 'buy' ? 'Buy' : 'Sell'} {modalToken?.symbol}
-            </h2>
-            <p className="mb-2">
-              {modalType === 'buy'
-                ? `How much ETH do you want to spend?`
-                : `How many tokens do you want to sell?`}
-            </p>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              className="border rounded p-2 w-full mb-2"
-              placeholder={modalType === 'buy' ? 'ETH amount' : 'Token amount'}
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              disabled={txLoading}
-            />
-            {txError && <div className="text-red-600 mb-2">{txError}</div>}
-            {txSuccess && <div className="text-green-600 mb-2">{txSuccess}</div>}
-            <div className="flex gap-2">
-              <Button onClick={closeModal} variant="outline" disabled={txLoading}>Cancel</Button>
-              <Button
-                onClick={handleTrade}
-                className="gradient-primary text-white"
-                disabled={txLoading || !amount}
-              >
-                {txLoading ? 'Processing...' : (modalType === 'buy' ? 'Buy' : 'Sell')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold mb-4">🛍️ Content Marketplace</h2>
         <p className="text-muted-foreground">Discover and collect tokenized content from creators worldwide</p>
@@ -231,11 +275,20 @@ const Marketplace = () => {
                       <Button
                         size="sm"
                         className="gradient-primary text-white hover-glow"
-                        onClick={() => openModal(isOwner ? 'sell' : 'buy', item)}
+                        onClick={() => isOwner ? handleSell(item) : handleBuy(item)}
+                        disabled={txLoadingId === item.id || !currentAddress}
                       >
-                        {isOwner ? 'Sell' : 'Buy Now'}
+                        {txLoadingId === item.id
+                          ? (isOwner ? 'Selling...' : 'Buying...')
+                          : (isOwner ? 'Sell' : 'Buy Now')}
                       </Button>
                     </div>
+                    {txErrorId === item.id && (
+                      <div className="text-red-600 text-xs mt-2">{txMessage}</div>
+                    )}
+                    {txSuccessId === item.id && (
+                      <div className="text-green-600 text-xs mt-2">{txMessage}</div>
+                    )}
                   </CardContent>
                 </Card>
               );
