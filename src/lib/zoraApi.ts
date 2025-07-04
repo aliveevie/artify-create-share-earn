@@ -133,4 +133,20 @@ export const convertTokenToMarketplaceItem = (token: TokenData, zoraData?: ZoraC
     creatorAddress: token.creatorAddress,
     createdAt: token.createdAt,
   };
+};
+
+// Fetch all tokens owned by a given address (holder)
+export const fetchTokensByOwner = async (ownerAddress: string): Promise<ZoraCoinData[]> => {
+  try {
+    if (!ownerAddress) return [];
+    // The Zora Coins SDK does not provide a direct getCoinsByOwner, so we would need to use the Zora GraphQL API or a similar endpoint.
+    // For now, this is a placeholder for the actual implementation.
+    // TODO: Replace with actual Zora API call when available.
+    console.log('[zoraApi] fetchTokensByOwner called for:', ownerAddress);
+    // Example: return await getCoinsByOwner(ownerAddress);
+    return [];
+  } catch (error) {
+    console.error('[zoraApi] Error fetching tokens by owner:', error);
+    return [];
+  }
 }; 
