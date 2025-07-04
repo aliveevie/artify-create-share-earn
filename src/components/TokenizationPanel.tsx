@@ -9,6 +9,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { createCoin, DeployCurrency } from "@zoralabs/coins-sdk";
 import { createPublicClient, http, Address } from "viem";
 import { base } from "viem/chains";
+import { addUserToken } from '@/lib/dataStorage';
 
 
 interface TokenizationPanelProps {
@@ -85,6 +86,25 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
       setResult(res);
       setTxHash(res.hash);
       setStage('done');
+      // Save token to local storage
+      if (res && res.address) {
+        const tokenToSave = {
+          address: res.address,
+          name: tokenData.name,
+          symbol: tokenData.symbol,
+          description: tokenData.description,
+          type: tokenData.type,
+          image: tokenData.image,
+          ipfsUri: newIpfsUri,
+          creatorAddress: address as string,
+          createdAt: new Date().toISOString(),
+          txHash: res.hash,
+        };
+        addUserToken(address as string, tokenToSave);
+        console.log('[TokenizationPanel] Token created and saved:', tokenToSave);
+      } else {
+        console.warn('[TokenizationPanel] No address in result:', res);
+      }
     } catch (e: any) {
       setError(e?.message || 'Error creating coin.');
       if (e?.hash) {
@@ -94,6 +114,7 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
         setPending(true);
       }
       setStage('error');
+      console.error('[TokenizationPanel] Error creating coin:', e);
     } finally {
       setLoading(false);
     }
