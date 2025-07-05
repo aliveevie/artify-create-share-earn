@@ -1,73 +1,87 @@
-# Welcome to your Lovable project
+# Artify – Create, Launch, and Trade Creator Coins on Zora
 
-## Project info
+[Live Site](https://artify-eight-bice.vercel.app/)
 
-**URL**: https://lovable.dev/projects/81163f13-e19b-45b1-b571-1a01a710f4ca
+Artify is a next-generation platform empowering creators to easily launch their own coins on the Zora ecosystem, tokenize their work, and build vibrant communities. With seamless wallet integration, a modern UI, and deep Zora protocol support, Artify makes it effortless to create, share, and earn from your digital creations.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 🚀 Features
 
-**Use Lovable**
+- **One-Click Coin Creation:**  
+  Launch your own creator coin on Zora with a simple, guided flow.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/81163f13-e19b-45b1-b571-1a01a710f4ca) and start prompting.
+- **Marketplace Integration:**  
+  List, buy, and sell tokens directly within the app.
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Farcaster MiniApp Support:**  
+  Artify is fully integrated as a [Farcaster MiniApp](https://farcaster.xyz/miniapps/AUXQuZoKwDPy/artify), enabling walletless onboarding and native social sharing.
 
-**Use your preferred IDE**
+- **Wallet Connect:**  
+  Seamless EVM wallet connection via Farcaster or standard web wallets.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- **Modern, Responsive UI:**  
+  Built with React, Tailwind CSS, and shadcn-ui for a beautiful experience on any device.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## 🛠️ How to Run Locally
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. **Clone the repository:**
+   ```sh
+   git clone https://github.com/aliveevie/artify-create-share-earn.git
+   cd artify-create-share-earn
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. **Install dependencies:**
+   ```sh
+   npm install
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. **Start the development server (with Vercel for API/Zora integration):**
+   ```sh
+   vercel dev
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+   > **Note:** The app uses Vercel serverless functions for API and Zora SDK operations. Make sure you have the [Vercel CLI](https://vercel.com/docs/cli) installed.
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🧩 Technical Highlights
 
-**Use GitHub Codespaces**
+- **Zora SDK Integration:**  
+  Full support for token creation, storage, and marketplace trading using the Zora protocol.  
+  See implementation details: [Zora SDK PR #1](https://github.com/aliveevie/artify-create-share-earn/pull/1)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- **Farcaster MiniApp & Wallet:**  
+  Native integration with Farcaster's MiniApp SDK and wallet connector for frictionless onboarding and EVM wallet actions.  
+  See implementation details: [Farcaster MiniApp PR #2](https://github.com/aliveevie/artify-create-share-earn/pull/2)
 
-## What technologies are used for this project?
+- **Manifest & Meta Tags:**  
+  Includes all required meta tags and manifest files for Farcaster MiniApp discovery and compliance.
 
-This project is built with:
+- **Mobile-First Navigation:**  
+  Responsive header with hamburger menu for optimal mobile usability.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## 📚 Resources
 
-Simply open [Lovable](https://lovable.dev/projects/81163f13-e19b-45b1-b571-1a01a710f4ca) and click on Share -> Publish.
+- [Live App on Vercel](https://artify-eight-bice.vercel.app/)
+- [Farcaster MiniApp](https://farcaster.xyz/miniapps/AUXQuZoKwDPy/artify)
+- [Zora Protocol](https://zora.co/)
+- [Vercel CLI Docs](https://vercel.com/docs/cli)
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## 🤝 Contributing
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Pull requests and issues are welcome! Please see the linked PRs above for architectural context and implementation details.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+---
+
+## License
+
+MIT
+
+---
