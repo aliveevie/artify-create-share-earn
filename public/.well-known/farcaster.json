@@ -1,8 +1,8 @@
 {
     "accountAssociation": {
         "header": "eyJmaWQiOjg0NjY4NSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDdkMDhkODRBQjA5RTk4MDVkNDBjNDU1RDIxMzE3OWVCRjczNTAwMTIifQ",
-        "payload": "eyJkb21haW4iOiJhcnRpZnkuZWlnaHQtYmljZS52ZXJjZWwuYXBwIn0",
-        "signature": "MHgzYjQ4OTBhYzVmZTJlZTAzZjdkMWJhNDMzM2I0MmI5NmQ2ODhlYWI1ZmUyYTRiY2M4NTkxYjcxNDllYTEyZDdiNTAyOGRmYTc3OGUxNjJlMmY0YmY3NzdlMGQ1YmVkMzNhM2RhMDdiZWE4NjYzMTY3ZTAyYmJkYTg2Y2UxNTZlZTFj"
+        "payload": "eyJkb21haW4iOiJhcnRpZnktZWlnaHQtYmljZS52ZXJjZWwuYXBwIn0",
+        "signature": "MHg0YmM0NmU4M2Q0MDM5MmVhOTU2ZmZiZTNjOTFhMThjNTMyOGQ3ZDk3ODljNGUyYTkxYTFjZDEwNDk3NzJmYzEzNDk5NzczOWM4Nzc1MjA1YTI1NDY4YTFkNWI2YTljMDAxOWM2ZTUzNTJmNDg0YjhhNmE0NTQ1MTNmODE0ZGEwYzFi"
       },
     "frame": {
       "name": "Artify",
