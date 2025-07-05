@@ -14,7 +14,13 @@ export interface ZoraCoinData {
   createdAt: string;
   uniqueHolders: number;
   mediaContent?: {
-    previewImage?: string;
+    previewImage?: {
+      small: string;
+      medium: string;
+      blurhash?: string;
+    };
+    mimeType?: string;
+    originalUri?: string;
   };
   address: string;
 }
@@ -111,8 +117,8 @@ export const convertTokenToMarketplaceItem = (token: TokenData, zoraData?: ZoraC
   const uniqueHolders = zoraData?.uniqueHolders || 0;
   
   // Extract image from IPFS URI
-  const imageUrl = token.image?.replace('ipfs://', 'https://coral-absolute-bee-687.mypinata.cloud/ipfs/') || 
-                   zoraData?.mediaContent?.previewImage ||
+  const imageUrl = token.image?.replace('ipfs://', 'https://teal-labour-chicken-186.mypinata.cloud/ipfs/') || 
+                   zoraData?.mediaContent?.previewImage?.small ||
                    'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=400&h=300&fit=crop'; // fallback
 
   return {

@@ -191,7 +191,7 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
         {/* Live preview */}
         {tokenData.image && (
           <div className="flex justify-center mb-4">
-            <img src={tokenData.image.replace('ipfs://', `https://coral-absolute-bee-687.mypinata.cloud/ipfs/`)} alt="Preview" className="rounded-lg max-h-64" />
+            <img src={tokenData.image.replace('ipfs://', `https://teal-labour-chicken-186.mypinata.cloud/ipfs/`)} alt="Preview" className="rounded-lg max-h-64" />
           </div>
         )}
         <div className="bg-muted/30 rounded-lg p-4">
@@ -201,7 +201,7 @@ const TokenizationPanel = ({ creatorData, onBack }: TokenizationPanelProps) => {
             <p><strong>Description:</strong> {tokenData.description || 'Not set'}</p>
             <p><strong>Type:</strong> {tokenData.type || 'Not set'}</p>
             <p><strong>Image:</strong> {tokenData.image || 'Not set'}</p>
-            <p><strong>IPFS URI:</strong> <a href={ipfsUri.replace('ipfs://', 'https://coral-absolute-bee-687.mypinata.cloud/ipfs/')} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{ipfsUri}</a></p>
+            <p><strong>IPFS URI:</strong> <a href={ipfsUri.replace('ipfs://', 'https://teal-labour-chicken-186.mypinata.cloud/ipfs/')} target="_blank" rel="noopener noreferrer" className="underline text-blue-700">{ipfsUri}</a></p>
           </div>
         </div>
         {txHash && (
