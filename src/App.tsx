@@ -8,12 +8,18 @@ import { WagmiProvider } from "wagmi";
 import { base } from "wagmi/chains";
 import { useEffect } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
+import { http, createConfig } from 'wagmi';
+import { farcasterMiniApp as miniAppConnector } from '@farcaster/miniapp-wagmi-connector';
 
 
-const config = getDefaultConfig({
-  appName: "Artify",
-  projectId: import.meta.env.VITE_WC_PROJECT_ID,
+const config = createConfig({
   chains: [base],
+  transports: {
+    [base.id]: http(),
+  },
+  connectors: [
+    miniAppConnector()
+  ]
 });
 
 const queryClient = new QueryClient();
@@ -42,3 +48,4 @@ const App = () => {
 };
 
 export default App;
+export { config };
