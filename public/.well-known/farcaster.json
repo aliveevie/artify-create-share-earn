@@ -1,4 +1,9 @@
 {
+    "accountAssociation": {
+        "header": "eyJmaWQiOjg0NjY4NSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDdkMDhkODRBQjA5RTk4MDVkNDBjNDU1RDIxMzE3OWVCRjczNTAwMTIifQ",
+        "payload": "eyJkb21haW4iOiJhcnRpZnkuZWlnaHQtYmljZS52ZXJjZWwuYXBwIn0",
+        "signature": "MHgzYjQ4OTBhYzVmZTJlZTAzZjdkMWJhNDMzM2I0MmI5NmQ2ODhlYWI1ZmUyYTRiY2M4NTkxYjcxNDllYTEyZDdiNTAyOGRmYTc3OGUxNjJlMmY0YmY3NzdlMGQ1YmVkMzNhM2RhMDdiZWE4NjYzMTY3ZTAyYmJkYTg2Y2UxNTZlZTFj"
+      },
     "frame": {
       "name": "Artify",
       "version": "1",
